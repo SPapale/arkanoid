@@ -33,7 +33,7 @@ public class JuegoPanel extends JPanel implements KeyListener {
     private final int columnas = 8;
     private final int bloqueWidth = 60;
     private final int bloqueHeight = 20;
-    private BufferedImage[] bloquesImg; // imagenes de los bloques
+    private BufferedImage[] bloquesImg; // imágenes de los bloques
 
 
     private int marcianoX = 200; // posición horizontal inicial
@@ -87,7 +87,7 @@ public class JuegoPanel extends JPanel implements KeyListener {
         }
 
         try {
-            fondoJuego = ImageIO.read(new File("media/Fondo_Garka.png")); // imagen de fondo para el juego
+            fondoJuego = ImageIO.read(new File("media/fondito.png")); // tu imagen de fondo para el juego
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -380,4 +380,3 @@ public class JuegoPanel extends JPanel implements KeyListener {
     @Override
     public void keyTyped(KeyEvent e) {}
 }
-
