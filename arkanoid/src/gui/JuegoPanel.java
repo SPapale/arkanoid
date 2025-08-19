@@ -3,6 +3,10 @@ package gui;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
+import java.awt.image.BufferedImage;
+import javax.imageio.ImageIO;
+import java.io.File;
+import java.io.IOException;
 import java.util.Random;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -12,12 +16,17 @@ public class JuegoPanel extends JPanel implements KeyListener {
     private int paddleX = 250;
     private final int paddleWidth = 100;
     private final int paddleHeight = 10;
+    private BufferedImage plataformaImg; // Imagen de la plataforma
+    private BufferedImage fondoInicio; // Imagen de fondo de la pantalla de inicio
+    private BufferedImage fondoJuego;// Imagen de fondo del juego
+    private Font miFuente; 
+
 
     private int ballX = 300;
     private int ballY = 300;
     private int ballDiameter = 20;
     private int ballDX = 2;
-    private int ballDY = -1;
+    private int ballDY = -2;
 
     private bloques[][] bloquesArray;
     private final int filas = 5;
@@ -31,6 +40,8 @@ public class JuegoPanel extends JPanel implements KeyListener {
     private final int maxVidas = 3; 
     private boolean perdiste = false;
 
+    private boolean enPantallaInicio = true;// controla si estamos en pantalla de inicio
+
     private Timer timer;
     private Random random = new Random();
 
@@ -39,14 +50,42 @@ public class JuegoPanel extends JPanel implements KeyListener {
         setFocusable(true);
         addKeyListener(this);
 
+        // cargar imagen de la plataforma
+        try {
+            plataformaImg = ImageIO.read(new File("media/plata.png"));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        // cargar imagen de fondo de inicio
+        try {
+            fondoInicio = ImageIO.read(new File("media/DarkNoid.png"));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        try {
+            fondoJuego = ImageIO.read(new File("media/Fondo_Garka.png")); // tu imagen de fondo para el juego
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        try {
+            miFuente = Font.createFont(Font.TRUETYPE_FONT, new File("media/pixel.ttf")).deriveFont(15f);
+        } catch (Exception e) {
+            e.printStackTrace();
+            miFuente = new Font("Arial", Font.BOLD, 40); // fuente de respaldo
+        }
+
         generarBloques(); // genera bloques random al iniciar
 
         timer = new Timer();
         timer.scheduleAtFixedRate(new TimerTask() {
             @Override
             public void run() {
-                moverPelota();
-                revisarColisiones();
+                if (!enPantallaInicio) { // solo mover y colisionar si ya empezó el juego
+                    moverPelota();
+                    revisarColisiones();
+                }
                 repaint();
             }
         }, 0, 10);
@@ -83,9 +122,42 @@ public class JuegoPanel extends JPanel implements KeyListener {
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
 
-        // dibujar pala
-        g.setColor(Color.GREEN);
-        g.fillRect(paddleX, getHeight() - 70, paddleWidth, paddleHeight);
+        // pantalla de inicio
+        if (enPantallaInicio) {
+            // dibujar imagen de fondo si existe
+            if (fondoInicio != null) {
+                g.drawImage(fondoInicio, 0, 0, getWidth(), getHeight(), null);
+            } else {
+                g.setColor(Color.BLACK);
+                g.fillRect(0, 0, getWidth(), getHeight());
+            }
+
+            // dibujar texto encima del fondo
+            g.setColor(Color.WHITE);
+            g.setFont(new Font("Arial", Font.BOLD, 40));
+            g.setFont(new Font("Arial", Font.PLAIN, 20));
+            g.drawString("Presiona ENTER para empezar", getWidth()/2 - 140, getHeight()/2 + 10);
+            return;
+        }
+        if (!enPantallaInicio) {
+            if (fondoJuego != null) {
+                g.drawImage(fondoJuego, 0, 0, getWidth(), getHeight(), null);
+            } else {
+                g.setColor(Color.BLACK); // fondo negro por defecto
+                g.fillRect(0, 0, getWidth(), getHeight());
+            }
+        }
+
+
+        // dibujar pala con imagen manteniendo proporciones
+        if (plataformaImg != null) {
+            int ancho = paddleWidth;
+            int alto = (int) ((double) plataformaImg.getHeight() / plataformaImg.getWidth() * ancho);
+            g.drawImage(plataformaImg, paddleX, getHeight() - 70, ancho, alto, null);
+        } else {
+            g.setColor(Color.GREEN);
+            g.fillRect(paddleX, getHeight() - 70, paddleWidth, paddleHeight);
+        }
 
         // dibujar pelota
         g.setColor(Color.WHITE);
@@ -101,12 +173,37 @@ public class JuegoPanel extends JPanel implements KeyListener {
         // dibujar vidas, puntaje y nivel
         g.setColor(Color.WHITE);
         g.setFont(new Font("Arial", Font.BOLD, 16));
-        g.drawString("Vidas: " + vidas, getWidth()/2 - 30, 20);
+     // dibujar vidas como mini plataformas
+        int vidaAncho = 40;
+        int vidaAlto = 20;
+        int espacio = 5; // espacio entre cada vida
+
+        for (int i = 0; i < vidas; i++) {
+            if (plataformaImg != null) {
+                g.drawImage(plataformaImg, getWidth()/2 - ((vidas * (vidaAncho + espacio))/2) + i * (vidaAncho + espacio),
+                            10, vidaAncho, vidaAlto, null);
+            } else {
+                g.setColor(Color.GREEN);
+                g.fillRect(getWidth()/2 - ((vidas * (vidaAncho + espacio))/2) + i * (vidaAncho + espacio),
+                           10, vidaAncho, vidaAlto);
+            }
+        }
+
+        if (miFuente != null) {
+            g.setFont(miFuente);
+        }
+        int sombraOffset = 2; // distancia de la sombra en píxeles
+        g.setColor(Color.BLACK); // color de la sombra
+        g.drawString("Puntaje: " + puntaje, 10 + sombraOffset, 20 + sombraOffset);
+        g.drawString("Nivel: " + nivel, 500 + sombraOffset, 20 + sombraOffset);
+
+        g.setColor(Color.WHITE); // texto principal
         g.drawString("Puntaje: " + puntaje, 10, 20);
         g.drawString("Nivel: " + nivel, 500, 20);
 
+       
         // si perdiste, mostrar mensaje
-        if (perdiste == true) {
+        if (perdiste) {
             g.setColor(Color.RED);
             g.setFont(new Font("Arial", Font.BOLD, 40));
             g.drawString("¡PERDISTE!", getWidth()/2 - 120, getHeight()/2);
@@ -116,7 +213,7 @@ public class JuegoPanel extends JPanel implements KeyListener {
     }
 
     private void moverPelota() {
-        if (perdiste) return; // si perdiste, no mover pelota
+        if (perdiste) return;
 
         ballX += ballDX;
         ballY += ballDY;
@@ -147,7 +244,7 @@ public class JuegoPanel extends JPanel implements KeyListener {
     }
 
     private void revisarColisiones() {
-        if (perdiste) return; // no revisar si perdiste
+        if (perdiste) return;
 
         boolean todosDestruidos = true;
         Rectangle ballRect = new Rectangle(ballX, ballY, ballDiameter, ballDiameter);
@@ -184,7 +281,13 @@ public class JuegoPanel extends JPanel implements KeyListener {
     public void keyPressed(KeyEvent e) {
         int key = e.getKeyCode();
 
-        if (!perdiste) {
+        // iniciar juego desde pantalla de inicio
+        if (enPantallaInicio && key == KeyEvent.VK_ENTER) {
+            enPantallaInicio = false;
+            return;
+        }
+
+        if (!perdiste && !enPantallaInicio) {
             if (key == KeyEvent.VK_LEFT && paddleX > 0) paddleX -= 20;
             if (key == KeyEvent.VK_RIGHT && paddleX + paddleWidth < getWidth()) paddleX += 20;
         }
