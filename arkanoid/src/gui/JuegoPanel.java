@@ -33,6 +33,17 @@ public class JuegoPanel extends JPanel implements KeyListener {
     private final int columnas = 8;
     private final int bloqueWidth = 60;
     private final int bloqueHeight = 20;
+    private BufferedImage[] bloquesImg; // imágenes de los bloques
+
+
+    private int marcianoX = 200; // posición horizontal inicial
+    private int marcianoY = 100; // posición vertical fija
+    private int marcianoWidth = 50;
+    private int marcianoHeight = 50;
+    private int marcianoDX = 2; // velocidad de movimiento
+    private int marcianoDY = 2; 
+    private BufferedImage marcianoImg; // imagen del marciano
+    private BufferedImage pelotaImg; //imagen de la pelota
 
     private int puntaje = 0;
     private int nivel = 1; // empieza en nivel 1
@@ -49,6 +60,17 @@ public class JuegoPanel extends JPanel implements KeyListener {
         setBackground(Color.BLACK);
         setFocusable(true);
         addKeyListener(this);
+
+        bloquesImg = new BufferedImage[5];
+        String[] nombres = {"bloque1.png","bloque2.png","bloque3.png",
+                            "bloque4.png","bloque5.png", "bloque6.png"};
+        for (int i = 0; i < bloquesImg.length; i++) {
+            try {
+                bloquesImg[i] = ImageIO.read(new File("media/" + nombres[i]));
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
 
         // cargar imagen de la plataforma
         try {
@@ -75,6 +97,16 @@ public class JuegoPanel extends JPanel implements KeyListener {
             e.printStackTrace();
             miFuente = new Font("Arial", Font.BOLD, 40); // fuente de respaldo
         }
+        try {
+            marcianoImg = ImageIO.read(new File("media/alien.png"));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        try {
+            pelotaImg = ImageIO.read(new File("media/pelotarda.png"));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 
         generarBloques(); // genera bloques random al iniciar
 
@@ -85,6 +117,10 @@ public class JuegoPanel extends JPanel implements KeyListener {
                 if (!enPantallaInicio) { // solo mover y colisionar si ya empezó el juego
                     moverPelota();
                     revisarColisiones();
+                    if(nivel >=2) {
+                    	moverMarciano(); 	
+                    }
+                    
                 }
                 repaint();
             }
@@ -93,16 +129,16 @@ public class JuegoPanel extends JPanel implements KeyListener {
 
     private void generarBloques() {
         bloquesArray = new bloques[filas][columnas];
-        Color[] colores = {Color.RED, Color.ORANGE, Color.YELLOW, Color.GREEN, Color.CYAN, Color.MAGENTA};
         for (int i = 0; i < filas; i++) {
             for (int j = 0; j < columnas; j++) {
                 if (random.nextBoolean()) {
+                    BufferedImage img = bloquesImg[random.nextInt(bloquesImg.length)];
                     bloquesArray[i][j] = new bloques(
                             10 + j * (bloqueWidth + 10),
                             50 + i * (bloqueHeight + 10),
                             bloqueWidth,
                             bloqueHeight,
-                            colores[random.nextInt(colores.length)]
+                            img
                     );
                 } else {
                     bloquesArray[i][j] = new bloques(
@@ -110,7 +146,7 @@ public class JuegoPanel extends JPanel implements KeyListener {
                             50 + i * (bloqueHeight + 10),
                             bloqueWidth,
                             bloqueHeight,
-                            Color.BLACK
+                            null
                     );
                     bloquesArray[i][j].destruir(); // invisible
                 }
@@ -118,13 +154,13 @@ public class JuegoPanel extends JPanel implements KeyListener {
         }
     }
 
+
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
 
         // pantalla de inicio
         if (enPantallaInicio) {
-            // dibujar imagen de fondo si existe
             if (fondoInicio != null) {
                 g.drawImage(fondoInicio, 0, 0, getWidth(), getHeight(), null);
             } else {
@@ -132,36 +168,49 @@ public class JuegoPanel extends JPanel implements KeyListener {
                 g.fillRect(0, 0, getWidth(), getHeight());
             }
 
-            // dibujar texto encima del fondo
             g.setColor(Color.WHITE);
-            g.setFont(new Font("Arial", Font.BOLD, 40));
             g.setFont(new Font("Arial", Font.PLAIN, 20));
             g.drawString("Presiona ENTER para empezar", getWidth()/2 - 140, getHeight()/2 + 10);
             return;
         }
-        if (!enPantallaInicio) {
-            if (fondoJuego != null) {
-                g.drawImage(fondoJuego, 0, 0, getWidth(), getHeight(), null);
-            } else {
-                g.setColor(Color.BLACK); // fondo negro por defecto
-                g.fillRect(0, 0, getWidth(), getHeight());
-            }
+
+        // fondo del juego
+        if (fondoJuego != null) {
+            g.drawImage(fondoJuego, 0, 0, getWidth(), getHeight(), null);
+        } else {
+            g.setColor(Color.BLACK);
+            g.fillRect(0, 0, getWidth(), getHeight());
         }
 
-
-        // dibujar pala con imagen manteniendo proporciones
+        // dibujar pala
         if (plataformaImg != null) {
-            int ancho = paddleWidth;
-            int alto = (int) ((double) plataformaImg.getHeight() / plataformaImg.getWidth() * ancho);
-            g.drawImage(plataformaImg, paddleX, getHeight() - 70, ancho, alto, null);
+            int alto = (int)((double)plataformaImg.getHeight() / plataformaImg.getWidth() * paddleWidth);
+            g.drawImage(plataformaImg, paddleX, getHeight() - 70, paddleWidth, alto, null);
         } else {
             g.setColor(Color.GREEN);
             g.fillRect(paddleX, getHeight() - 70, paddleWidth, paddleHeight);
         }
 
         // dibujar pelota
-        g.setColor(Color.WHITE);
-        g.fillOval(ballX, ballY, ballDiameter, ballDiameter);
+        if (pelotaImg != null) {
+            int ancho = ballDiameter;
+            int alto = (int)((double)pelotaImg.getHeight() / pelotaImg.getWidth() * ancho); // mantiene proporción
+            g.drawImage(pelotaImg, ballX, ballY, ancho, alto, null);
+        } else {
+            g.setColor(Color.WHITE);
+            g.fillOval(ballX, ballY, ballDiameter, ballDiameter);
+        }
+
+
+        // dibujar marciano solo si nivel >= 2
+        if (nivel >= 2) {
+            if (marcianoImg != null) {
+                g.drawImage(marcianoImg, marcianoX, marcianoY, marcianoWidth, marcianoHeight, null);
+            } else {
+                g.setColor(Color.GREEN);
+                g.fillRect(marcianoX, marcianoY, marcianoWidth, marcianoHeight);
+            }
+        }
 
         // dibujar bloques
         for (int i = 0; i < filas; i++) {
@@ -170,39 +219,31 @@ public class JuegoPanel extends JPanel implements KeyListener {
             }
         }
 
-        // dibujar vidas, puntaje y nivel
-        g.setColor(Color.WHITE);
-        g.setFont(new Font("Arial", Font.BOLD, 16));
-     // dibujar vidas como mini plataformas
-        int vidaAncho = 40;
-        int vidaAlto = 20;
-        int espacio = 5; // espacio entre cada vida
-
+        // dibujar vidas
+        int vidaAncho = 40, vidaAlto = 20, espacio = 5;
         for (int i = 0; i < vidas; i++) {
             if (plataformaImg != null) {
-                g.drawImage(plataformaImg, getWidth()/2 - ((vidas * (vidaAncho + espacio))/2) + i * (vidaAncho + espacio),
+                g.drawImage(plataformaImg, getWidth()/2 - ((vidas * (vidaAncho + espacio))/2) + i*(vidaAncho+espacio),
                             10, vidaAncho, vidaAlto, null);
             } else {
                 g.setColor(Color.GREEN);
-                g.fillRect(getWidth()/2 - ((vidas * (vidaAncho + espacio))/2) + i * (vidaAncho + espacio),
+                g.fillRect(getWidth()/2 - ((vidas * (vidaAncho + espacio))/2) + i*(vidaAncho+espacio),
                            10, vidaAncho, vidaAlto);
             }
         }
 
-        if (miFuente != null) {
-            g.setFont(miFuente);
-        }
-        int sombraOffset = 2; // distancia de la sombra en píxeles
-        g.setColor(Color.BLACK); // color de la sombra
+        // puntaje y nivel
+        if (miFuente != null) g.setFont(miFuente);
+        int sombraOffset = 2;
+        g.setColor(Color.BLACK);
         g.drawString("Puntaje: " + puntaje, 10 + sombraOffset, 20 + sombraOffset);
         g.drawString("Nivel: " + nivel, 500 + sombraOffset, 20 + sombraOffset);
 
-        g.setColor(Color.WHITE); // texto principal
+        g.setColor(Color.WHITE);
         g.drawString("Puntaje: " + puntaje, 10, 20);
         g.drawString("Nivel: " + nivel, 500, 20);
 
-       
-        // si perdiste, mostrar mensaje
+        // mensaje de derrota
         if (perdiste) {
             g.setColor(Color.RED);
             g.setFont(new Font("Arial", Font.BOLD, 40));
@@ -241,7 +282,29 @@ public class JuegoPanel extends JPanel implements KeyListener {
                 ballDY = 0;
             }
         }
+
+        // colisión con el marciano solo si estamos en nivel 2 o superior
+        if (nivel >= 2) {
+            Rectangle ballRect = new Rectangle(ballX, ballY, ballDiameter, ballDiameter);
+            Rectangle marcianoRect = new Rectangle(marcianoX, marcianoY, marcianoWidth, marcianoHeight);
+
+            if (ballRect.intersects(marcianoRect)) {
+                ballDY = -ballDY; // invierte dirección vertical
+            }
+        }
     }
+
+
+    private void moverMarciano() {
+        if (nivel < 2) return; // no se mueve en nivel 1
+
+        marcianoX += marcianoDX;
+        marcianoY += marcianoDY;
+
+        if (marcianoX < 0 || marcianoX + marcianoWidth > getWidth()) marcianoDX = -marcianoDX;
+        if (marcianoY < 0 || marcianoY + marcianoHeight > getHeight() - 70) marcianoDY = -marcianoDY;
+    }
+
 
     private void revisarColisiones() {
         if (perdiste) return;
@@ -266,6 +329,15 @@ public class JuegoPanel extends JPanel implements KeyListener {
             nivel++;
             generarBloques();
             resetPelota();
+            if (nivel == 2) {
+                // posición inicial random dentro del panel
+                marcianoX = random.nextInt(getWidth() - marcianoWidth);
+                marcianoY = random.nextInt(getHeight()/2); // arriba de la mitad de la ventana
+                // velocidad random
+                marcianoDX = 2 + random.nextInt(2); // 2 o 3 px por frame
+                marcianoDY = 2 + random.nextInt(2);
+            }
+
         }
     }
 
