@@ -7,7 +7,9 @@ import java.awt.image.BufferedImage;
 import javax.imageio.ImageIO;
 import java.io.File;
 import java.io.IOException;
+import java.util.HashSet;
 import java.util.Random;
+import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -21,12 +23,13 @@ public class JuegoPanel extends JPanel implements KeyListener {
     private BufferedImage fondoJuego;// Imagen de fondo del juego
     private Font miFuente; 
 
-
+    private javax.swing.Timer movimientoTimer;
+    
     private int ballX = 300;
     private int ballY = 300;
     private int ballDiameter = 20;
-    private int ballDX = 2;
-    private int ballDY = -2;
+    private int movX = 2;
+    private int movY = -2;
 
     private bloques[][] bloquesArray;
     private final int filas = 5;
@@ -55,12 +58,16 @@ public class JuegoPanel extends JPanel implements KeyListener {
 
     private Timer timer;
     private Random random = new Random();
+    
+    Set<Integer> teclasPresionadas = new HashSet<>();
 
     public JuegoPanel() {
         setBackground(Color.BLACK);
         setFocusable(true);
         addKeyListener(this);
-
+        
+        movimientoPlataforma();	// funcion para permitir el movimiento de la plataforma
+        
         bloquesImg = new BufferedImage[5];
         String[] nombres = {"bloque1.png","bloque2.png","bloque3.png",
                             "bloque4.png","bloque5.png", "bloque6.png"};
@@ -128,27 +135,27 @@ public class JuegoPanel extends JPanel implements KeyListener {
     }
 
     private void generarBloques() {
-        bloquesArray = new bloques[filas][columnas];
-        for (int i = 0; i < filas; i++) {
+        bloquesArray = new bloques[filas][columnas];	// array de los bloques procediente de la clase bloques
+        for (int i = 0; i < filas; i++) {		// ciclo for para recorrer por cada fila y columna la posicion de los bloques
             for (int j = 0; j < columnas; j++) {
-                if (random.nextBoolean()) {
-                    BufferedImage img = bloquesImg[random.nextInt(bloquesImg.length)];
-                    bloquesArray[i][j] = new bloques(
+                if (random.nextBoolean()) {		// condicion para alternar bloques de manera random por cada fila y columna
+                    BufferedImage img = bloquesImg[random.nextInt(bloquesImg.length)];		// genero el bloque
+                    bloquesArray[i][j] = new bloques(	// si es true, la clase bloques sera llenado con los parametros correspondientes
                             10 + j * (bloqueWidth + 10),
                             50 + i * (bloqueHeight + 10),
                             bloqueWidth,
                             bloqueHeight,
-                            img
+                            img		
                     );
                 } else {
-                    bloquesArray[i][j] = new bloques(
-                            10 + j * (bloqueWidth + 10),
+                    bloquesArray[i][j] = new bloques(	// en caso de ser false, el bloque no sera visible, lo cual corresponde al ultimo valor nulo
+                            10 + j * (bloqueWidth + 10),	
                             50 + i * (bloqueHeight + 10),
                             bloqueWidth,
                             bloqueHeight,
                             null
                     );
-                    bloquesArray[i][j].destruir(); // invisible
+                    bloquesArray[i][j].destruir(); // metodo de la clase bloques para destruir aquellos bloques no visibles
                 }
             }
         }
@@ -156,7 +163,7 @@ public class JuegoPanel extends JPanel implements KeyListener {
 
 
     @Override
-    protected void paintComponent(Graphics g) {
+    protected void paintComponent(Graphics g) {		// funcion para dibujar o materializar componentes ya sean circulos o rectangulos
         super.paintComponent(g);
 
         // pantalla de inicio
@@ -202,8 +209,8 @@ public class JuegoPanel extends JPanel implements KeyListener {
         }
 
 
-        // dibujar marciano solo si nivel >= 2
-        if (nivel >= 2) {
+        // dibujar marciano cada 3 niveles
+        if (nivel % 3 == 0) {
             if (marcianoImg != null) {
                 g.drawImage(marcianoImg, marcianoX, marcianoY, marcianoWidth, marcianoHeight, null);
             } else {
@@ -252,23 +259,25 @@ public class JuegoPanel extends JPanel implements KeyListener {
             g.drawString("Presiona R para reiniciar", getWidth()/2 - 110, getHeight()/2 + 40);
         }
     }
-
+    
+    // funcion para iniciar el movimiento de la pelota
     private void moverPelota() {
-        if (perdiste) return;
+        if (perdiste) return;	// condicion para detener la funcion en caso de que el jugador haya perdido
 
-        ballX += ballDX;
-        ballY += ballDY;
+        ballX += movX;	// movimiento en eje x
+        ballY += movY;	// movimiento en eje y
 
         // rebote en paredes
-        if (ballX < 0 || ballX + ballDiameter > getWidth()) ballDX = -ballDX;
-        if (ballY < 0) ballDY = -ballDY;
+        if (ballX < 0 || ballX + ballDiameter > getWidth()) movX = -movX;
+        if (ballY < 0) movY = -movY;
 
         // rebote en la pala
         if (ballY + ballDiameter >= getHeight() - 70 &&
-                ballX + ballDiameter >= paddleX &&
-                ballX <= paddleX + paddleWidth) {
-            ballDY = -ballDY;
-        }
+        	    ballY + ballDiameter <= getHeight() - 70 + paddleHeight &&
+        	    ballX + ballDiameter >= paddleX &&
+        	    ballX <= paddleX + paddleWidth){
+        	    movY = -movY;
+        	}
 
         // si cae la pelota
         if (ballY > getHeight()) {
@@ -278,25 +287,25 @@ public class JuegoPanel extends JPanel implements KeyListener {
             } else {
                 vidas = 0;
                 perdiste = true;
-                ballDX = 0;
-                ballDY = 0;
+                movX = 0;
+                movY = 0;
             }
         }
 
         // colisión con el marciano solo si estamos en nivel 2 o superior
-        if (nivel >= 2) {
+        if (nivel % 3 == 0) {
             Rectangle ballRect = new Rectangle(ballX, ballY, ballDiameter, ballDiameter);
             Rectangle marcianoRect = new Rectangle(marcianoX, marcianoY, marcianoWidth, marcianoHeight);
 
             if (ballRect.intersects(marcianoRect)) {
-                ballDY = -ballDY; // invierte dirección vertical
+                movY = -movY; // invierte dirección vertical
             }
         }
     }
 
 
     private void moverMarciano() {
-        if (nivel < 2) return; // no se mueve en nivel 1
+        if (nivel % 3 > 0) return; // aparece cada tres niveles
 
         marcianoX += marcianoDX;
         marcianoY += marcianoDY;
@@ -305,31 +314,32 @@ public class JuegoPanel extends JPanel implements KeyListener {
         if (marcianoY < 0 || marcianoY + marcianoHeight > getHeight() - 70) marcianoDY = -marcianoDY;
     }
 
-
+    // funcion para las colisiones de la pelota con los bloques
     private void revisarColisiones() {
-        if (perdiste) return;
+        if (perdiste) return;	
 
         boolean todosDestruidos = true;
-        Rectangle ballRect = new Rectangle(ballX, ballY, ballDiameter, ballDiameter);
-        for (int i = 0; i < filas; i++) {
+        Rectangle ballRect = new Rectangle(ballX, ballY, ballDiameter, ballDiameter);	// para formar un perimetro en forma de rectangulo para el circulo y de esta forma detectar con mas facilidad colisiones
+        for (int i = 0; i < filas; i++) {	// ciclo for para recorrer cada bloque
             for (int j = 0; j < columnas; j++) {
-                bloques b = bloquesArray[i][j];
-                if (b.isVisible()) {
+                bloques b = bloquesArray[i][j];	
+                if (b.isVisible()) {	// condicion para saber si estan todos los bloques destruidos
                     todosDestruidos = false;
-                    if (ballRect.intersects(b.getBounds())) {
-                        b.destruir();
-                        ballDY = -ballDY;
-                        puntaje += 10;
+                    if (ballRect.intersects(b.getBounds())) {	// condicion para detectar colisiones con los bloques
+                        b.destruir();	// metodo para destruir el bloque
+                        movY = -movY;	// el rebote de la pelota es con el eje Y
+                        puntaje += 10;	// sumamos puntaje pa
                     }
                 }
             }
         }
 
-        if (todosDestruidos) {
-            nivel++;
-            generarBloques();
-            resetPelota();
-            if (nivel == 2) {
+        if (todosDestruidos) {	// en caso de estar todos destruidos
+            nivel++;	// incrementamos el nivel
+            generarBloques();	// llamamos a la funcion para generar bloques
+            resetPelota();	// reseteamos la posicion de la pelota
+            
+            if (nivel % 3 ==0) {	// para el marciano
                 // posición inicial random dentro del panel
                 marcianoX = random.nextInt(getWidth() - marcianoWidth);
                 marcianoY = random.nextInt(getHeight()/2); // arriba de la mitad de la ventana
@@ -341,27 +351,39 @@ public class JuegoPanel extends JPanel implements KeyListener {
         }
     }
 
-    private void resetPelota() {
+    private void resetPelota() {	// funcion para resetear la pelota
         ballX = 300;
         ballY = 300;
-        ballDX = 2 + nivel - 1;
-        ballDY = -2 - nivel + 1;
+        movX = 2 + nivel - 1;
+        movY = -2 - nivel + 1;
         paddleX = 250;
     }
 
+    // funcion para modular el movimiento de la plataforma mediante el teclado
+    private void movimientoPlataforma() {
+        movimientoTimer = new javax.swing.Timer(26, t -> {
+            if (!perdiste && !enPantallaInicio) {	// si no perdimos y no estamos en la pantalla inicial
+                if (teclasPresionadas.contains(KeyEvent.VK_LEFT) && paddleX > 0) {	// movemos hacia la izquierda
+                    paddleX -= 10;
+                }
+                if (teclasPresionadas.contains(KeyEvent.VK_RIGHT) && paddleX + paddleWidth < getWidth()) {	// movemos hacia la derecha
+                    paddleX += 10;
+                }
+            }
+        });
+        movimientoTimer.start();	// timer para que el movimiento de la plataforma sea mas fluido
+    }
+    
     @Override
-    public void keyPressed(KeyEvent e) {
+    public void keyPressed(KeyEvent e) {	// evento keypressed para algunos detalles
+    	teclasPresionadas.add(e.getKeyCode());
+
         int key = e.getKeyCode();
 
         // iniciar juego desde pantalla de inicio
-        if (enPantallaInicio && key == KeyEvent.VK_ENTER) {
+        if (enPantallaInicio && key == KeyEvent.VK_ENTER) {	
             enPantallaInicio = false;
             return;
-        }
-
-        if (!perdiste && !enPantallaInicio) {
-            if (key == KeyEvent.VK_LEFT && paddleX > 0) paddleX -= 20;
-            if (key == KeyEvent.VK_RIGHT && paddleX + paddleWidth < getWidth()) paddleX += 20;
         }
 
         // reiniciar juego si perdiste
@@ -374,9 +396,11 @@ public class JuegoPanel extends JPanel implements KeyListener {
             resetPelota();
         }
     }
-
-    @Override
-    public void keyReleased(KeyEvent e) {}
     @Override
     public void keyTyped(KeyEvent e) {}
+
+	@Override
+	public void keyReleased(KeyEvent e) {
+		teclasPresionadas.remove(e.getKeyCode());
+	}
 }

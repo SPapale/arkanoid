@@ -40,3 +40,4 @@ public class bloques {
         return new Rectangle(x, y, width, height);
     }
 }
+
