@@ -364,10 +364,10 @@ public class JuegoPanel extends JPanel implements KeyListener {
         movimientoTimer = new javax.swing.Timer(26, t -> {
             if (!perdiste && !enPantallaInicio) {	// si no perdimos y no estamos en la pantalla inicial
                 if (teclasPresionadas.contains(KeyEvent.VK_LEFT) && paddleX > 0) {	// movemos hacia la izquierda
-                    paddleX -= 10;
+                    paddleX -= 15;
                 }
                 if (teclasPresionadas.contains(KeyEvent.VK_RIGHT) && paddleX + paddleWidth < getWidth()) {	// movemos hacia la derecha
-                    paddleX += 10;
+                    paddleX += 15;
                 }
             }
         });
