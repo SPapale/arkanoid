@@ -209,8 +209,8 @@ public class JuegoPanel extends JPanel implements KeyListener {
         }
 
 
-        // dibujar marciano cada 3 niveles
-        if (nivel % 3 == 0) {
+        // dibujar marciano cada 2 niveles
+        if (nivel % 2 == 0) {
             if (marcianoImg != null) {
                 g.drawImage(marcianoImg, marcianoX, marcianoY, marcianoWidth, marcianoHeight, null);
             } else {
@@ -293,7 +293,7 @@ public class JuegoPanel extends JPanel implements KeyListener {
         }
 
         // colisión con el marciano solo si estamos en nivel 2 o superior
-        if (nivel % 3 == 0) {
+        if (nivel % 2 == 0) {
             Rectangle ballRect = new Rectangle(ballX, ballY, ballDiameter, ballDiameter);
             Rectangle marcianoRect = new Rectangle(marcianoX, marcianoY, marcianoWidth, marcianoHeight);
 
@@ -305,7 +305,7 @@ public class JuegoPanel extends JPanel implements KeyListener {
 
 
     private void moverMarciano() {
-        if (nivel % 3 > 0) return; // aparece cada tres niveles
+        if (nivel % 2 > 0) return; // aparece cada tres niveles
 
         marcianoX += marcianoDX;
         marcianoY += marcianoDY;
